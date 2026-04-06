@@ -1,6 +1,10 @@
 # Create and run this project
 
-This repository is a Go microservice-style backend with three services: **user-service** (SSO/auth over gRPC), **order-service** (orders over gRPC, Kafka events, gRPC to inventory), and **inventory-service** (products over gRPC, Kafka consumer). Data is stored in **MongoDB**. Messaging uses **Kafka** (with Zookeeper in `docker-compose`). **Redis** is started by Compose but is not wired in the Go services in the current tree.
+This repository is a Go microservice-style backend with three services: **user-service** (SSO/auth over gRPC), **order-service** (orders over gRPC, Kafka events, gRPC to inventory), and **inventory-service** (products over gRPC, Kafka consumer).  
+Current storage setup during migration:
+- **order-service** uses **PostgreSQL**
+- **user-service** and **inventory-service** still use **MongoDB**
+Messaging uses **Kafka** (with Zookeeper in `docker-compose`). **Redis** is started by Compose but is not wired in the Go services in the current tree.
 
 ## Prerequisites
 
@@ -8,7 +12,8 @@ This repository is a Go microservice-style backend with three services: **user-s
 - [Protocol Buffers compiler](https://grpc.io/docs/protoc-installation/) (`protoc`) and Go plugins:
   - `protoc-gen-go`
   - `protoc-gen-go-grpc`
-- **MongoDB** reachable from your machine (not defined in `docker-compose.yml`; run locally or add a service).
+- **PostgreSQL** for `order-service` (added in `docker-compose.yml`).
+- **MongoDB** for `user-service` and `inventory-service`.
 - **Docker** and **Docker Compose** (optional but recommended for Kafka/Zookeeper/Redis).
 
 ## 1. Infrastructure
@@ -21,6 +26,7 @@ docker compose up -d
 
 This exposes:
 
+- PostgreSQL: `localhost:5432` (db: `order_service`, user: `postgres`, password: `postgres`)
 - Kafka: `localhost:9092`
 - Zookeeper: `localhost:2181`
 - Redis: `localhost:6379` (requires `REDIS_PASSWORD` in your environment or a `.env` file next to `docker-compose.yml` for Compose variable substitution)
@@ -29,7 +35,15 @@ This exposes:
 
 Each service loads environment variables with [`caarlos0/env`](https://github.com/caarlos0/env) and tries to load a file named **`local.env`** in the service directory (`godotenv`). Create `local.env` inside each service folder (you can copy from `.env` if present and adjust). Do not commit secrets.
 
-### Shared MongoDB fields (all three services)
+### order-service PostgreSQL fields
+
+| Variable | Role |
+| --- | --- |
+| `POSTGRES_HOST`, `POSTGRES_PORT` | PostgreSQL host/port |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database credentials |
+| `POSTGRES_SSL_MODE` | SSL mode (`disable` for local dev) |
+
+### MongoDB fields (user-service and inventory-service)
 
 | Variable | Role |
 | --- | --- |

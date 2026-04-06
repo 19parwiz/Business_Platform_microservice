@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/19parwiz/order-service/pkg/mongo"
+	"github.com/19parwiz/order-service/pkg/postgres"
 	"github.com/caarlos0/env/v10"
 	"github.com/joho/godotenv"
 	_ "github.com/joho/godotenv/autoload"
@@ -12,7 +12,7 @@ import (
 
 type (
 	Config struct {
-		Mongo    mongo.Config
+		Postgres postgres.Config
 		Server   Server
 		Version  string `env:"VERSION"`
 		Services Microservices

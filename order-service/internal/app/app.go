@@ -7,9 +7,9 @@ import (
 	grpcAPI "github.com/19parwiz/order-service/internal/adapter/grpc"
 	gclients "github.com/19parwiz/order-service/internal/adapter/grpc/clients"
 	"github.com/19parwiz/order-service/internal/adapter/kafka"
-	mongoRepo "github.com/19parwiz/order-service/internal/adapter/mongo"
+	postgresRepo "github.com/19parwiz/order-service/internal/adapter/postgres"
 	"github.com/19parwiz/order-service/internal/usecase"
-	mongoConn "github.com/19parwiz/order-service/pkg/mongo"
+	postgresConn "github.com/19parwiz/order-service/pkg/postgres"
 	"log"
 	"os"
 	"os/signal"
@@ -23,19 +23,20 @@ type App struct {
 	grpcServer  *grpcAPI.ServerAPI
 	grpcClients *gclients.Clients
 	kafkaProd   *kafka.Producer
+	pgDB        *postgresConn.DB
 }
 
 func New(ctx context.Context, cfg *config.Config) (*App, error) {
-	log.Printf(fmt.Sprintf("Initializing %s service...", serviceName))
+	log.Printf("Initializing %s service...", serviceName)
 
-	log.Println("Connecting to DB:", cfg.Mongo.Database)
-	mongoDB, err := mongoConn.NewDB(ctx, cfg.Mongo)
+	log.Println("Connecting to DB:", cfg.Postgres.Database)
+	pgDB, err := postgresConn.NewDB(ctx, cfg.Postgres)
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to DB: %v", err)
 	}
 
-	aiRepo := mongoRepo.NewAutoInc(mongoDB.Conn)
-	orderRepo := mongoRepo.NewOrderRepo(mongoDB.Conn)
+	aiRepo := postgresRepo.NewAutoInc(pgDB.Pool)
+	orderRepo := postgresRepo.NewOrderRepo(pgDB.Pool)
 
 	grpcClients, err := gclients.NewClients(cfg)
 	if err != nil {
@@ -58,6 +59,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 		grpcServer:  grpcServer,
 		grpcClients: grpcClients,
 		kafkaProd:   producer,
+		pgDB:        pgDB,
 	}
 
 	return app, nil
@@ -69,7 +71,7 @@ func (app *App) Start() error {
 	//app.httpServer.Run(errCh)
 	app.grpcServer.Run(errCh)
 
-	log.Printf(fmt.Sprintf("Starting %s service!", serviceName))
+	log.Printf("Starting %s service!", serviceName)
 
 	shutdownCh := make(chan os.Signal, 1)
 	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM)
@@ -78,7 +80,7 @@ func (app *App) Start() error {
 	case errRun := <-errCh:
 		return errRun
 	case sig := <-shutdownCh:
-		log.Printf(fmt.Sprintf("Received %v signal, shutting down!", sig))
+		log.Printf("Received %v signal, shutting down!", sig)
 		app.Stop()
 		log.Println("graceful shutdown completed!")
 	}
@@ -100,5 +102,8 @@ func (app *App) Stop() {
 		if err := app.kafkaProd.Close(); err != nil {
 			log.Println("failed to close Kafka producer:", err)
 		}
+	}
+	if app.pgDB != nil {
+		app.pgDB.Close()
 	}
 }
