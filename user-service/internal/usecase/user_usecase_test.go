@@ -90,7 +90,7 @@ func TestUserUsecase_Register(t *testing.T) {
 	mailer := &mockMailer{}
 
 	// Initialize the usecase
-	uc := NewUserUsecase(autoInc, userRepo, hasher, mailer)
+	uc := NewUserUsecase(autoInc, userRepo, hasher, mailer, "https://app.example.com")
 
 	// Input data
 	user := domain.User{

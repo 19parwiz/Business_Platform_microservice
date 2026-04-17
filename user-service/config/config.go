@@ -11,11 +11,18 @@ import (
 )
 
 type (
-		Config struct {
+	Config struct {
 		Postgres postgres.Config
 		Server   Server
-		SMTP    SMTPConfig //  Added smptconfig here
-		Version string     `env:"VERSION"`
+		SMTP     SMTPConfig
+		App      App
+		Version  string `env:"VERSION"`
+	}
+
+	// App holds non-secret URLs and behaviour shared by use cases (e.g. email links).
+	App struct {
+		// PublicBaseURL is the user-facing web origin (no trailing slash), e.g. https://app.example.com
+		PublicBaseURL string `env:"PUBLIC_APP_URL" envDefault:"http://localhost:3000"`
 	}
 
 	Server struct {

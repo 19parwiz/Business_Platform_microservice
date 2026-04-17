@@ -45,7 +45,7 @@ func NewApp(ctx context.Context, cfg *config.Config) (*App, error) {
 		cfg.SMTP.Password,
 	)
 
-	userUsecase := usecase.NewUserUsecase(aiRepo, userRepo, hasher, mailer)
+	userUsecase := usecase.NewUserUsecase(aiRepo, userRepo, hasher, mailer, cfg.App.PublicBaseURL)
 
 	grpcServer := grpc.New(cfg.Server, userUsecase)
 

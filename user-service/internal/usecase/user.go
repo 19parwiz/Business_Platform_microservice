@@ -2,9 +2,11 @@ package usecase
 
 import (
 	"context"
-
 	"crypto/rand"
 	"encoding/hex"
+	"net/url"
+	"strings"
+
 	"github.com/19parwiz/user-service/internal/domain"
 )
 
@@ -14,11 +16,11 @@ type MailSender interface {
 }
 
 type UserUsecase struct {
-	aiRepo   AutoIncRepo
-	userRepo UserRepo
-	pHasher  PasswordHasher
-	//mailer   *mail.Mailer        this was previous
-	mailer MailSender //  use interface, not *mail.Mailer
+	aiRepo          AutoIncRepo
+	userRepo        UserRepo
+	pHasher         PasswordHasher
+	mailer          MailSender
+	publicBaseURL   string // trimmed origin for confirmation links (e.g. https://app.example.com)
 }
 
 func generateToken() string {
@@ -30,12 +32,13 @@ func generateToken() string {
 	return hex.EncodeToString(b)
 }
 
-func NewUserUsecase(ai AutoIncRepo, userRepo UserRepo, pHasher PasswordHasher, mailer MailSender) UserUsecase {
+func NewUserUsecase(ai AutoIncRepo, userRepo UserRepo, pHasher PasswordHasher, mailer MailSender, publicBaseURL string) UserUsecase {
 	return UserUsecase{
-		aiRepo:   ai,
-		userRepo: userRepo,
-		pHasher:  pHasher,
-		mailer:   mailer,
+		aiRepo:        ai,
+		userRepo:      userRepo,
+		pHasher:       pHasher,
+		mailer:        mailer,
+		publicBaseURL: strings.TrimSpace(publicBaseURL),
 	}
 }
 
@@ -66,11 +69,18 @@ func (uc UserUsecase) Register(ctx context.Context, req domain.User) (domain.Use
 		return domain.User{}, err
 	}
 
-	confirmationLink := "http://localhost:3000/confirm?email=" + req.Email + "&token=" + req.EmailConfirmToken
+	base := strings.TrimSuffix(uc.publicBaseURL, "/")
+	if base == "" {
+		base = "http://localhost:3000"
+	}
+	q := url.Values{}
+	q.Set("email", req.Email)
+	q.Set("token", req.EmailConfirmToken)
+	confirmationLink := base + "/confirm?" + q.Encode()
 
-	emailBody := "New user registered with email: " + req.Email + "\n\nPlease click the following link to confirm the email:\n" + confirmationLink
+	emailBody := "Confirm your email for " + req.Email + " by opening:\n\n" + confirmationLink
 
-	err = uc.mailer.SendEmail([]string{"aliparwizbaktash19@gmail.com"}, "Email Confirmation (Test)", emailBody)
+	err = uc.mailer.SendEmail([]string{req.Email}, "Confirm your email", emailBody)
 
 	if err != nil {
 		return domain.User{}, err
