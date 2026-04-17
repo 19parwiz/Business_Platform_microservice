@@ -1,7 +1,6 @@
 # --- Secrets & local config (never commit) ---
 .env
 .env.*
-!.env.example
 *.local
 local.env
 **/local.env

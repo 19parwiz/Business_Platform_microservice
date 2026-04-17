@@ -18,7 +18,7 @@ Persistence: user, order, and inventory data share **one** PostgreSQL database n
 
 **Name:** `flower_shop` is a clear, conventional identifier (lowercase + underscore). Display branding can stay “Flower Shop”; in Postgres, mixed case like `Flower_Shop` needs quoted identifiers and is awkward in URLs, so this repo standardizes on `flower_shop`.
 
-**One database, three services:** set the same `POSTGRES_DB=flower_shop` in **user-service**, **inventory-service**, and **order-service** `local.env` (see each `local.env.example`).
+**One database, three services:** set the same `POSTGRES_DB=flower_shop` in **user-service**, **inventory-service**, and **order-service** `local.env` files (create `local.env` in each service directory; it is gitignored).
 
 **With Docker Postgres** (`docker compose up -d postgres …`): `POSTGRES_DB` in `docker-compose.yml` is `flower_shop`, so the first volume init creates that database. Scripts under `deploy/postgres-init/` are only comments now (no extra `CREATE DATABASE`).
 
@@ -47,9 +47,9 @@ Docker (optional):
 docker compose up -d
 ```
 
-Postgres in Compose is exposed on port **5432** with user **postgres** / password **postgres** unless you change the file. Redis uses **`REDIS_PASSWORD`** from a root `.env` if present; otherwise it defaults to **`postgres`** (same as `.env.example`). Copy `.env.example` to `.env` only when you want your own password.
+Postgres in Compose is exposed on port **5432** with user **postgres** / password **postgres** unless you change the file. Redis uses **`REDIS_PASSWORD`** from a root `.env` if present; otherwise it defaults to **`postgres`**.
 
-Configuration: each service reads env vars via caarlos0/env and loads **`local.env`** in its service folder. Copy **`local.env.example`** there as **`local.env`** and adjust. Do not commit secrets.
+Configuration: each service reads env vars via caarlos0/env and loads **`local.env`** in its service folder (you create this file; do not commit it). See the “Typical vars” line below for required keys.
 
 Typical vars: `GRPC_PORT`, `GRPC_TIMEOUT`, `HTTP_PORT` (required where HTTP is enabled), optional `VERSION`. User-service, inventory-service, and order-service each need `POSTGRES_HOST`, `POSTGRES_PORT`, **`POSTGRES_DB=flower_shop`** (same value for all three), `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_SSL_MODE`. Order-service also needs `BROKERS` for Kafka, `INVENTORY_SERVICE_HOST`, and `INVENTORY_SERVICE_PORT`. User-service needs SMTP settings for mail. Inventory needs `BROKERS` for the consumer.
 

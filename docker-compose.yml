@@ -22,7 +22,7 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
-    # Default matches POSTGRES_PASSWORD for local dev; override with .env (see .env.example).
+    # Default matches POSTGRES_PASSWORD for local dev; override with root .env (REDIS_PASSWORD=...).
     command: redis-server --requirepass ${REDIS_PASSWORD:-postgres}
     networks:
       - app-network
