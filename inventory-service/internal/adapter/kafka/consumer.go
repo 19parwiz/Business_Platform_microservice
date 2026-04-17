@@ -1,18 +1,18 @@
 package kafka
 
 import (
+	"errors"
 	"log"
 
 	"github.com/IBM/sarama"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/19parwiz/inventory-service/internal/domain"
 	"github.com/19parwiz/inventory-service/internal/usecase"
 	events "github.com/19parwiz/inventory-service/protos/gen/golang"
 )
 
 type Consumer struct {
-	usecase *usecase.Product
+	usecase ProductStock
 	Topic   string
 }
 
@@ -37,32 +37,21 @@ func (h *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 		}
 
 		for _, item := range event.GetItems() {
-			if item == nil {
+			err := ProcessOrderLineItem(session.Context(), h.usecase, item)
+			if err == nil {
 				continue
 			}
-			productID := item.GetProductId()
-			qty := item.GetQuantity()
-			if productID == 0 || qty == 0 {
-				log.Printf("kafka consumer: skip line item (product_id=%d quantity=%d)", productID, qty)
-				continue
-			}
-
-			filter := domain.ProductFilter{ID: &productID}
-			current, err := h.usecase.Get(session.Context(), filter)
-			if err != nil {
-				log.Printf("kafka consumer: get product_id=%d: %v", productID, err)
-				continue
-			}
-			if current.Stock < qty {
-				log.Printf("kafka consumer: insufficient stock product_id=%d have=%d need=%d", productID, current.Stock, qty)
-				continue
-			}
-
-			newStock := current.Stock - qty
-			update := domain.ProductUpdateData{Stock: &newStock}
-			if err := h.usecase.Update(session.Context(), filter, update); err != nil {
-				log.Printf("kafka consumer: update stock product_id=%d: %v", productID, err)
-				continue
+			switch {
+			case errors.Is(err, ErrOrderLineInvalid):
+				if item == nil {
+					log.Printf("kafka consumer: skip nil line item")
+				} else {
+					log.Printf("kafka consumer: skip line item (product_id=%d quantity=%d)", item.GetProductId(), item.GetQuantity())
+				}
+			case errors.Is(err, ErrInsufficientStock):
+				log.Printf("kafka consumer: %v", err)
+			default:
+				log.Printf("kafka consumer: %v", err)
 			}
 		}
 
