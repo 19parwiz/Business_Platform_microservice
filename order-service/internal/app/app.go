@@ -3,23 +3,26 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/19parwiz/order-service/config"
-	grpcAPI "github.com/19parwiz/order-service/internal/adapter/grpc"
-	gclients "github.com/19parwiz/order-service/internal/adapter/grpc/clients"
-	"github.com/19parwiz/order-service/internal/adapter/kafka"
-	postgresRepo "github.com/19parwiz/order-service/internal/adapter/postgres"
-	"github.com/19parwiz/order-service/internal/usecase"
-	postgresConn "github.com/19parwiz/order-service/pkg/postgres"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/19parwiz/order-service/config"
+	grpcAPI "github.com/19parwiz/order-service/internal/adapter/grpc"
+	gclients "github.com/19parwiz/order-service/internal/adapter/grpc/clients"
+	httpRepo "github.com/19parwiz/order-service/internal/adapter/http"
+	"github.com/19parwiz/order-service/internal/adapter/kafka"
+	postgresRepo "github.com/19parwiz/order-service/internal/adapter/postgres"
+	"github.com/19parwiz/order-service/internal/usecase"
+	postgresConn "github.com/19parwiz/order-service/pkg/postgres"
 )
 
 const serviceName = "order-service"
 
 type App struct {
-	//httpServer *httpRepo.API
+	httpServer  *httpRepo.API
 	grpcServer  *grpcAPI.ServerAPI
 	grpcClients *gclients.Clients
 	kafkaProd   *kafka.Producer
@@ -51,11 +54,11 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 
 	orderUsecase := usecase.NewOrder(aiRepo, orderRepo, inventoryClient, producer)
 
-	//httpServer := httpRepo.New(cfg.Server, orderUsecase)
+	httpServer := httpRepo.New(cfg.Server, orderUsecase)
 	grpcServer := grpcAPI.New(cfg.Server, orderUsecase)
 
 	app := &App{
-		//httpServer: httpServer,
+		httpServer:  httpServer,
 		grpcServer:  grpcServer,
 		grpcClients: grpcClients,
 		kafkaProd:   producer,
@@ -68,7 +71,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 func (app *App) Start() error {
 	errCh := make(chan error)
 
-	//app.httpServer.Run(errCh)
+	app.httpServer.Run(errCh)
 	app.grpcServer.Run(errCh)
 
 	log.Printf("Starting %s service!", serviceName)
@@ -88,10 +91,16 @@ func (app *App) Start() error {
 }
 
 func (app *App) Stop() {
-	//err := app.httpServer.Stop()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if app.httpServer != nil {
+		if err := app.httpServer.Stop(shutdownCtx); err != nil {
+			log.Println("failed to shutdown http service:", err)
+		}
+	}
 	err := app.grpcServer.Stop()
 	if err != nil {
-		log.Println("failed to shutdown http service:", err)
+		log.Println("failed to shutdown grpc service:", err)
 	}
 
 	// Guard clauses keep shutdown safe even if initialization failed halfway.

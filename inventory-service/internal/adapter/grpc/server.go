@@ -10,9 +10,6 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -59,12 +56,6 @@ func (s *ServerAPI) Run(errCh chan<- error) {
 }
 
 func (s *ServerAPI) Stop() error {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	sig := <-quit
-	log.Println("Shutdown signal received", "signal:", sig.String())
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

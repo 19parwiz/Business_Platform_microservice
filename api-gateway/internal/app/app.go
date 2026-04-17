@@ -3,14 +3,16 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/19parwiz/api-gateway/config"
-	"github.com/19parwiz/api-gateway/internal/adapter/grpc"
-	"github.com/19parwiz/api-gateway/internal/adapter/http"
-	handlers "github.com/19parwiz/api-gateway/internal/adapter/http/handler"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/19parwiz/api-gateway/config"
+	"github.com/19parwiz/api-gateway/internal/adapter/grpc"
+	"github.com/19parwiz/api-gateway/internal/adapter/http"
+	handlers "github.com/19parwiz/api-gateway/internal/adapter/http/handler"
 )
 
 const ServiceName = "api-gateway"
@@ -64,8 +66,9 @@ func (app *App) Start() error {
 }
 
 func (app *App) Stop() {
-	err := app.httpServer.Stop()
-	if err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := app.httpServer.Stop(ctx); err != nil {
 		log.Printf("Failed to stop http server: %v", err)
 	}
 	app.grpcClients.Close()

@@ -3,26 +3,27 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/19parwiz/inventory-service/config"
-	grpcAPI "github.com/19parwiz/inventory-service/internal/adapter/grpc"
-	"github.com/19parwiz/inventory-service/internal/adapter/kafka"
-	"github.com/IBM/sarama"
-
-	//httpRepo "github.com/19parwiz/inventory-service/internal/adapter/http"
-	postgresRepo "github.com/19parwiz/inventory-service/internal/adapter/postgres"
-	"github.com/19parwiz/inventory-service/internal/usecase"
-	postgresConn "github.com/19parwiz/inventory-service/pkg/postgres"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/19parwiz/inventory-service/config"
+	grpcAPI "github.com/19parwiz/inventory-service/internal/adapter/grpc"
+	httpRepo "github.com/19parwiz/inventory-service/internal/adapter/http"
+	"github.com/19parwiz/inventory-service/internal/adapter/kafka"
+	postgresRepo "github.com/19parwiz/inventory-service/internal/adapter/postgres"
+	"github.com/19parwiz/inventory-service/internal/usecase"
+	postgresConn "github.com/19parwiz/inventory-service/pkg/postgres"
+	"github.com/IBM/sarama"
 )
 
 const serviceName = "inventory-service"
 const consumerGroupName = "inventory-consumer-group"
 
 type App struct {
-	//httpServer *httpRepo.API
+	httpServer    *httpRepo.API
 	grpcServer    *grpcAPI.ServerAPI
 	consumerGroup sarama.ConsumerGroup
 	kafkaHandler  *kafka.Consumer
@@ -43,7 +44,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 
 	pUsecase := usecase.NewProduct(aiRepo, pRepo)
 
-	//httpServer := httpRepo.New(cfg.Server, pUsecase)
+	httpServer := httpRepo.New(cfg.Server, pUsecase)
 	grpcServer := grpcAPI.New(cfg.Server, pUsecase)
 
 	kafkaConfig := sarama.NewConfig()
@@ -55,7 +56,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	kafkaHandler := kafka.NewConsumer(pUsecase, "order.created")
 
 	app := &App{
-		//httpServer: httpServer,
+		httpServer:    httpServer,
 		grpcServer:    grpcServer,
 		consumerGroup: consumerGroup,
 		kafkaHandler:  kafkaHandler,
@@ -68,7 +69,7 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 func (app *App) Start() error {
 	errCh := make(chan error)
 
-	//app.httpServer.Run(errCh)
+	app.httpServer.Run(errCh)
 	app.grpcServer.Run(errCh)
 
 	// Start Kafka consumer in background
@@ -98,10 +99,16 @@ func (app *App) Start() error {
 }
 
 func (app *App) Stop() {
-	//err := app.httpServer.Stop()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if app.httpServer != nil {
+		if err := app.httpServer.Stop(shutdownCtx); err != nil {
+			log.Println("failed to shutdown http service:", err)
+		}
+	}
 	err := app.grpcServer.Stop()
 	if err != nil {
-		log.Println("failed to shutdown http service:", err)
+		log.Println("failed to shutdown grpc service:", err)
 	}
 
 	if err := app.consumerGroup.Close(); err != nil {

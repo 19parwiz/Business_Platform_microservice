@@ -4,42 +4,34 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	stdhttp "net/http"
+
 	"github.com/19parwiz/inventory-service/config"
 	"github.com/19parwiz/inventory-service/internal/adapter/http/handler"
 	"github.com/gin-gonic/gin"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
-const serverIPAddress = "0.0.0.0:%d" // Changed to 0.0.0.0 for external access
+const serverIPAddress = "0.0.0.0:%d"
 
 type API struct {
-	server *gin.Engine
-	cfg    config.HTTPServer
-
+	router         *gin.Engine
+	cfg            config.HTTPServer
 	address        string
 	productHandler *handler.ProductHandler
+	httpSrv        *stdhttp.Server
 }
 
 func New(cfg config.Server, useCase handler.ProductUseCase) *API {
-	// Setting the Gin mode
 	gin.SetMode(cfg.HTTPServer.Mode)
 
-	// Creating a new Gin Engine
 	server := gin.New()
-
-	// Applying middleware
 	server.Use(gin.Recovery())
 
-	// Binding products
 	productHandler := handler.NewProductHandler(useCase)
 
 	api := &API{
-		server:         server,
+		router:         server,
 		cfg:            cfg.HTTPServer,
 		address:        fmt.Sprintf(serverIPAddress, cfg.HTTPServer.Port),
 		productHandler: productHandler,
@@ -51,7 +43,7 @@ func New(cfg config.Server, useCase handler.ProductUseCase) *API {
 }
 
 func (api *API) setupRoutes() {
-	v1 := api.server.Group("api/v1")
+	v1 := api.router.Group("api/v1")
 	{
 		products := v1.Group("/products")
 		{
@@ -65,34 +57,25 @@ func (api *API) setupRoutes() {
 }
 
 func (api *API) Run(errCh chan<- error) {
+	api.httpSrv = &stdhttp.Server{
+		Addr:    api.address,
+		Handler: api.router,
+	}
 	go func() {
 		log.Printf("HTTP server running on: %v", api.address)
-
-		// No need to reinitialize `api.server` here. Just run it directly.
-		if err := api.server.Run(api.address); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := api.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, stdhttp.ErrServerClosed) {
 			errCh <- fmt.Errorf("failed to run HTTP server: %w", err)
-			return
 		}
 	}()
 }
 
-func (a *API) Stop() error {
-	// Setting up the signal channel to catch termination signals
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	// Blocking until a signal is received
-	sig := <-quit
-	log.Println("Shutdown signal received", "signal:", sig.String())
-
-	// Creating a context with timeout for graceful shutdown
-	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	log.Println("HTTP server shutting down gracefully")
-
-	// Note: You can use `Shutdown` if you use `http.Server` instead of `gin.Engine`.
-	log.Println("HTTP server stopped successfully")
-
+func (api *API) Stop(ctx context.Context) error {
+	if api.httpSrv == nil {
+		return nil
+	}
+	if err := api.httpSrv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("http shutdown: %w", err)
+	}
+	log.Println("HTTP server stopped")
 	return nil
 }

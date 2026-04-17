@@ -10,9 +10,6 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -65,15 +62,6 @@ func (s *ServerAPI) Run(errCh chan<- error) {
 
 // Stop gracefully shuts down the gRPC server
 func (s *ServerAPI) Stop() error {
-	// Setting up the signal channel to catch termination signals
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	// Blocking until a signal is received
-	sig := <-quit
-	log.Println("Shutdown signal received", "signal:", sig.String())
-
-	// Create a context with timeout for graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

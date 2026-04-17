@@ -1,3 +1,64 @@
-.idea/
-local.env
+# --- Secrets & local config (never commit) ---
 .env
+.env.*
+!.env.example
+*.local
+local.env
+**/local.env
+*.pem
+*.key
+*_rsa
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# --- Markdown: ignore all except README.md ---
+*.md
+!README.md
+
+# --- Plain text dumps / notes ---
+*.txt
+!requirements.txt
+
+# --- Build outputs & binaries ---
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+__debug_bin
+/bin/
+/build/
+/dist/
+/tmp/
+/temp/
+*.a
+
+# --- Go coverage & profiling ---
+*.coverprofile
+coverage.html
+coverage.xml
+*.prof
+
+# --- IDE & editors ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Optional local tooling ---
+.task/
+.air.toml.local
