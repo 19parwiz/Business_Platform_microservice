@@ -12,7 +12,7 @@ function authHeaders() {
 }
 
 /**
- * Calls api-gateway; parses JSON; throws Error with message on failure.
+ * JSON fetch helper; throws Error with message on failure.
  */
 export async function apiFetch(path, { method = "GET", body, auth = false } = {}) {
   const base = getApiBase();

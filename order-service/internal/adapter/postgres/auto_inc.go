@@ -17,10 +17,10 @@ func NewAutoInc(pool *pgxpool.Pool) *AutoInc {
 
 func (a *AutoInc) Next(ctx context.Context, coll string) (uint64, error) {
 	query := `
-INSERT INTO auto_inc_ids (collection_name, counter)
+INSERT INTO order_auto_inc_ids (collection_name, counter)
 VALUES ($1, 1)
 ON CONFLICT (collection_name)
-DO UPDATE SET counter = auto_inc_ids.counter + 1
+DO UPDATE SET counter = order_auto_inc_ids.counter + 1
 RETURNING counter;
 `
 	var nextID int64

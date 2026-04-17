@@ -39,7 +39,7 @@ func (db *DB) Close() {
 
 func (db *DB) ensureSchema(ctx context.Context) error {
 	schema := `
-CREATE TABLE IF NOT EXISTS auto_inc_ids (
+CREATE TABLE IF NOT EXISTS user_auto_inc_ids (
   collection_name TEXT PRIMARY KEY,
   counter BIGINT NOT NULL
 );

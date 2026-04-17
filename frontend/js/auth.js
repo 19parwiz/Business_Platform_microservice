@@ -1,6 +1,6 @@
 /**
- * Stores credentials for api-gateway protected routes (X-Email / X-Password).
- * Demo-only: replace with proper tokens when you harden the gateway.
+ * Browser-only session for checkout and account (demo headers).
+ * Replace with proper auth tokens before production.
  */
 const KEY_EMAIL = "bloomstem_email";
 const KEY_PASSWORD = "bloomstem_password";

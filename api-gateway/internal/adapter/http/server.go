@@ -15,6 +15,21 @@ import (
 
 const serverIPAddress = "0.0.0.0:%d"
 
+// corsMiddleware allows browser clients (e.g. static frontend on another port) to call the gateway.
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		h := c.Writer.Header()
+		h.Set("Access-Control-Allow-Origin", "*")
+		h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		h.Set("Access-Control-Allow-Headers", "Content-Type, X-Email, X-Password")
+		if c.Request.Method == stdhttp.MethodOptions {
+			c.AbortWithStatus(stdhttp.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
+}
+
 type Server struct {
 	router  *gin.Engine
 	cfg     config.HTTPServer
@@ -28,6 +43,7 @@ func NewServer(cfg config.Config, handler *handler.Handler) *Server {
 
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(corsMiddleware())
 
 	s := &Server{
 		router:  r,

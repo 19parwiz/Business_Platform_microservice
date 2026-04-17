@@ -28,7 +28,7 @@ function renderProducts(data, container) {
   const rows = products
     .map(
       (p) =>
-        `<li><strong>${escapeHtml(p.name || "")}</strong> · ${escapeHtml(p.category || "")} · $${Number(p.price).toFixed(2)} · stock ${p.stock} <span class="muted">#${p.productId}</span></li>`
+        `<li><strong>${escapeHtml(p.name || "")}</strong> · ${escapeHtml(p.category || "")} · $${Number(p.price).toFixed(2)} · ${p.stock} available <span class="muted">#${p.productId}</span></li>`
     )
     .join("");
   container.innerHTML = `<ul class="product-list">${rows}</ul>`;
@@ -44,7 +44,7 @@ function renderOrders(data, container) {
   const rows = orders
     .map(
       (o) =>
-        `<li>Order <strong>#${o.orderId}</strong> · status ${escapeHtml(o.status || "")} · total $${Number(o.totalAmount).toFixed(2)}</li>`
+        `<li>Order <strong>#${o.orderId}</strong> · ${escapeHtml(o.status || "—")} · $${Number(o.totalAmount).toFixed(2)}</li>`
     )
     .join("");
   container.innerHTML = `<ul class="product-list">${rows}</ul>`;
@@ -65,9 +65,8 @@ async function onRegister(e) {
   const password = $("reg-password")?.value || "";
   const name = $("reg-name")?.value?.trim();
   try {
-    const data = await registerUser({ email, password, name });
-    const uid = data.userId ?? data.user_id;
-    setStatus(status, `Registered — user id ${uid}`, true);
+    await registerUser({ email, password, name });
+    setStatus(status, "Welcome! Sign in below with the email and password you chose.", true);
   } catch (err) {
     setStatus(status, err.message || String(err), false);
   }
@@ -79,14 +78,14 @@ async function onSaveSession(e) {
   const email = $("sess-email")?.value?.trim();
   const password = $("sess-password")?.value || "";
   setSession(email, password);
-  setStatus(status, "Session saved in this browser (for protected API calls).", true);
+  setStatus(status, "Signed in on this browser for checkout and your details.", true);
 }
 
 function onClearSession() {
   clearSession();
   $("sess-email").value = "";
   $("sess-password").value = "";
-  setStatus($("status-session"), "Session cleared.", true);
+  setStatus($("status-session"), "Signed out on this browser.", true);
 }
 
 async function onLoadProducts() {
@@ -96,11 +95,39 @@ async function onLoadProducts() {
   try {
     const data = await listProducts(1, 20);
     renderProducts(data, out);
-    setStatus(status, `Loaded ${(data.products || []).length} item(s).`, true);
+    setStatus(status, `Showing ${(data.products || []).length} bouquet(s).`, true);
   } catch (err) {
     setStatus(status, err.message || String(err), false);
     out.innerHTML = "";
   }
+}
+
+function renderProfileCard(data, el) {
+  if (!el) return;
+  const name = data?.name ?? data?.fullName;
+  const email = data?.email;
+  const uid = data?.userId ?? data?.user_id;
+  const bits = [];
+  if (name) {
+    bits.push(
+      `<p><span class="profile-card__k">Name</span> ${escapeHtml(String(name))}</p>`
+    );
+  }
+  if (email) {
+    bits.push(
+      `<p><span class="profile-card__k">Email</span> ${escapeHtml(String(email))}</p>`
+    );
+  }
+  if (uid != null && uid !== "") {
+    bits.push(
+      `<p><span class="profile-card__k">Reference</span> ${escapeHtml(String(uid))}</p>`
+    );
+  }
+  if (!bits.length) {
+    el.innerHTML = "<p class=\"muted\">No details returned.</p>";
+    return;
+  }
+  el.innerHTML = bits.join("");
 }
 
 async function onProfile() {
@@ -108,16 +135,24 @@ async function onProfile() {
   const out = $("profile-out");
   const { email } = getSession();
   if (!email) {
-    setStatus(status, "Save a session first (email + password).", false);
+    setStatus(status, "Sign in above with your email and password first.", false);
+    if (out) {
+      out.innerHTML = "";
+      out.hidden = true;
+    }
     return;
   }
   try {
     const data = await getProfile();
-    out.textContent = JSON.stringify(data, null, 2);
-    setStatus(status, "Profile loaded.", true);
+    renderProfileCard(data, out);
+    if (out) out.hidden = false;
+    setStatus(status, "Here are your saved details.", true);
   } catch (err) {
     setStatus(status, err.message || String(err), false);
-    out.textContent = "";
+    if (out) {
+      out.innerHTML = "";
+      out.hidden = true;
+    }
   }
 }
 
@@ -127,13 +162,13 @@ async function onPlaceOrder(e) {
   const pid = parseInt($("order-product-id")?.value?.trim() || "0", 10) || 0;
   const qty = parseInt($("order-qty")?.value?.trim() || "0", 10) || 0;
   if (!pid || !qty) {
-    setStatus(status, "Enter product id and quantity.", false);
+    setStatus(status, "Enter a bouquet number and quantity.", false);
     return;
   }
   try {
     const data = await createOrder([{ productId: pid, quantity: qty }]);
     const oid = data.orderId ?? data.order_id;
-    setStatus(status, `Order created — id ${oid}`, true);
+    setStatus(status, `Thanks — your order is in. Reference #${oid}.`, true);
   } catch (err) {
     setStatus(status, err.message || String(err), false);
   }
@@ -146,7 +181,7 @@ async function onListOrders() {
   try {
     const data = await listOrders(1, 10);
     renderOrders(data, out);
-    setStatus(status, `Loaded ${(data.orders || []).length} order(s).`, true);
+    setStatus(status, `Showing your last ${(data.orders || []).length} order(s).`, true);
   } catch (err) {
     setStatus(status, err.message || String(err), false);
     out.innerHTML = "";

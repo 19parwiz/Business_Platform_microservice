@@ -1,3 +1,2 @@
--- Creates additional databases on first container init (order_service is created via POSTGRES_DB).
-CREATE DATABASE user_service;
-CREATE DATABASE inventory_service;
+-- Single database `flower_shop` is created from POSTGRES_DB in docker-compose.yml.
+-- All services (user, inventory, order) connect to that database with separate table names.

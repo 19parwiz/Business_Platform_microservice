@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Bloom & Stem — fresh flowers and simple business tools." />
-    <!-- Go api-gateway base URL (HTTP). Change port to match api-gateway local.env HTTP_PORT. -->
+    <meta name="description" content="Bloom & Stem — fresh flowers, bouquets, and easy ordering." />
     <meta name="api-base" content="http://localhost:8080" />
     <title>Bloom & Stem</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-<!--
-  Rose photography from Unsplash (https://unsplash.com/s/photos/rose) — free under the Unsplash License.
-  Local assets: place PNG/WebP in assets/images/ and swap src below if you want self-hosted files.
--->
 <header class="site-hero">
     <div class="site-hero__bg" role="presentation" aria-hidden="true"></div>
     <div class="site-hero__overlay" aria-hidden="true"></div>
@@ -28,11 +26,12 @@
             referrerpolicy="no-referrer-when-downgrade"
         />
         <p class="brand-name">Bloom & Stem</p>
-        <h1>Fresh flowers, simple operations</h1>
-        <p class="tagline">A compact storefront you can grow into a full startup later.</p>
+        <h1>Fresh flowers for every occasion</h1>
+        <p class="tagline">Local stems, hand-tied bouquets, and a calm place to browse and order.</p>
     </div>
 </header>
-<main>
+
+<main class="page-main">
     <div class="panels">
         <section class="panel">
             <img
@@ -46,7 +45,7 @@
             />
             <div class="panel-body">
                 <h2>Customers</h2>
-                <p>Accounts, sign-in, and profiles — powered by your user service.</p>
+                <p>Create an account and keep your details up to date.</p>
             </div>
         </section>
         <section class="panel">
@@ -61,7 +60,7 @@
             />
             <div class="panel-body">
                 <h2>Bouquets &amp; stock</h2>
-                <p>Catalog, inventory, and pricing — your product service behind the scenes.</p>
+                <p>Seasonal stems, arrangements, and what is available today.</p>
             </div>
         </section>
         <section class="panel">
@@ -76,79 +75,80 @@
             />
             <div class="panel-body">
                 <h2>Orders</h2>
-                <p>Cart to checkout and fulfilment — orders wired through your platform.</p>
+                <p>From cart to doorstep — simple checkout and tracking.</p>
             </div>
         </section>
     </div>
 
-    <section class="console" aria-label="Live API demo">
-        <h2 class="console-title">Connect to your Go stack</h2>
-        <p class="console-intro">
-            This UI calls the <strong>api-gateway</strong> over HTTP (<code class="inline-code">fetch</code>).
-            Gateway URL: <span id="api-base-hint" class="inline-code"></span>
-        </p>
+    <section class="dashboard" aria-label="Account and shop">
+        <div class="dashboard__shell">
+            <header class="dashboard__head">
+                <h2 class="dashboard__title">Your shop</h2>
+                <p class="dashboard__lede">Sign in, browse the wall, and place an order — same tools we use behind the counter.</p>
+                <p class="dashboard__connection"><span class="pill" id="api-base-hint" title="Connection (for staff setup)"></span></p>
+            </header>
 
-        <div class="console-grid">
-            <div class="console-card">
-                <h3>Register (user-service)</h3>
-                <form id="form-register" class="stack">
-                    <label class="field"><span>Email</span><input id="reg-email" type="email" autocomplete="email" required /></label>
-                    <label class="field"><span>Password</span><input id="reg-password" type="password" autocomplete="new-password" required /></label>
-                    <label class="field"><span>Name</span><input id="reg-name" type="text" autocomplete="name" required /></label>
-                    <button type="submit" class="btn primary">Create account</button>
-                </form>
-                <p id="status-register" class="status" role="status"></p>
-            </div>
+            <div class="dashboard__grid">
+                <article class="tool-card">
+                    <h3 class="tool-card__title">New account</h3>
+                    <form id="form-register" class="stack">
+                        <label class="field"><span class="field__label">Email</span><input id="reg-email" type="email" autocomplete="email" required /></label>
+                        <label class="field"><span class="field__label">Password</span><input id="reg-password" type="password" autocomplete="new-password" required /></label>
+                        <label class="field"><span class="field__label">Name</span><input id="reg-name" type="text" autocomplete="name" required /></label>
+                        <button type="submit" class="btn btn--primary">Create account</button>
+                    </form>
+                    <p id="status-register" class="status" role="status"></p>
+                </article>
 
-            <div class="console-card">
-                <h3>Session (gateway auth)</h3>
-                <p class="muted small">Protected routes send <code class="inline-code">X-Email</code> and <code class="inline-code">X-Password</code> — same as your Gin middleware.</p>
-                <form id="form-session" class="stack">
-                    <label class="field"><span>Email</span><input id="sess-email" type="email" autocomplete="username" /></label>
-                    <label class="field"><span>Password</span><input id="sess-password" type="password" autocomplete="current-password" /></label>
-                    <div class="btn-row">
-                        <button type="submit" class="btn primary">Save session</button>
-                        <button type="button" class="btn ghost" id="btn-session-clear">Clear</button>
-                    </div>
-                </form>
-                <button type="button" class="btn secondary" id="btn-profile">Load profile</button>
-                <pre id="profile-out" class="code-out" aria-live="polite"></pre>
-                <p id="status-session" class="status" role="status"></p>
-            </div>
+                <article class="tool-card">
+                    <h3 class="tool-card__title">Sign in</h3>
+                    <p class="tool-card__hint">We remember you on this device only.</p>
+                    <form id="form-session" class="stack">
+                        <label class="field"><span class="field__label">Email</span><input id="sess-email" type="email" autocomplete="username" /></label>
+                        <label class="field"><span class="field__label">Password</span><input id="sess-password" type="password" autocomplete="current-password" /></label>
+                        <div class="btn-row">
+                            <button type="submit" class="btn btn--primary">Save</button>
+                            <button type="button" class="btn btn--quiet" id="btn-session-clear">Clear</button>
+                        </div>
+                    </form>
+                    <button type="button" class="btn btn--outline" id="btn-profile">Show my details</button>
+                    <div id="profile-out" class="profile-card" aria-live="polite" hidden></div>
+                    <p id="status-session" class="status" role="status"></p>
+                </article>
 
-            <div class="console-card">
-                <h3>Catalog (inventory-service)</h3>
-                <p class="muted small">Public: <code class="inline-code">GET /api/v1/products</code></p>
-                <button type="button" class="btn primary" id="btn-products">Refresh products</button>
-                <div id="products-out" class="products-out"></div>
-                <p id="status-catalog" class="status" role="status"></p>
-            </div>
+                <article class="tool-card">
+                    <h3 class="tool-card__title">Bouquets</h3>
+                    <p class="tool-card__hint">What is on the wall right now.</p>
+                    <button type="button" class="btn btn--primary" id="btn-products">Refresh list</button>
+                    <div id="products-out" class="data-out"></div>
+                    <p id="status-catalog" class="status" role="status"></p>
+                </article>
 
-            <div class="console-card wide">
-                <h3>Orders (order-service)</h3>
-                <p class="muted small">Requires session. Body is a JSON array of <code class="inline-code">{ "productId", "quantity" }</code> per gateway handler.</p>
-                <form id="form-order" class="stack horizontal">
-                    <label class="field"><span>Product id</span><input id="order-product-id" type="number" min="1" step="1" required /></label>
-                    <label class="field"><span>Qty</span><input id="order-qty" type="number" min="1" step="1" required /></label>
-                    <button type="submit" class="btn primary">Place order</button>
-                </form>
-                <div class="btn-row">
-                    <button type="button" class="btn secondary" id="btn-orders">List my orders</button>
-                </div>
-                <div id="orders-out" class="products-out"></div>
-                <p id="status-orders" class="status" role="status"></p>
+                <article class="tool-card tool-card--wide">
+                    <h3 class="tool-card__title">Orders</h3>
+                    <p class="tool-card__hint">Sign in above first. Use the bouquet number from the list.</p>
+                    <form id="form-order" class="order-row">
+                        <label class="field field--compact"><span class="field__label">Bouquet #</span><input id="order-product-id" type="number" min="1" step="1" placeholder="#" required /></label>
+                        <label class="field field--compact"><span class="field__label">Qty</span><input id="order-qty" type="number" min="1" step="1" placeholder="1" required /></label>
+                        <button type="submit" class="btn btn--primary">Place order</button>
+                    </form>
+                    <button type="button" class="btn btn--outline" id="btn-orders">My orders</button>
+                    <div id="orders-out" class="data-out"></div>
+                    <p id="status-orders" class="status" role="status"></p>
+                </article>
             </div>
         </div>
     </section>
 </main>
+
 <footer class="photo-credit">
     <p>
-        Rose photos from
+        Photos
         <a href="https://unsplash.com/s/photos/rose" target="_blank" rel="noopener noreferrer">Unsplash</a>
-        (free to use):
+        ·
         <a href="https://unsplash.com/photos/UDfxsawmiKk" target="_blank" rel="noopener noreferrer">Thomas Curryer</a>,
         <a href="https://unsplash.com/photos/a-pink-rose-is-blooming-in-a-garden-nfLo-Tsw5IE" target="_blank" rel="noopener noreferrer">Tatiana Reusche</a>,
-        <a href="https://unsplash.com/photos/pink-rose-in-bloom-close-up-photo-5fNcr2tJ-aI" target="_blank" rel="noopener noreferrer">Liliya Kontanistova</a>.
+        <a href="https://unsplash.com/photos/pink-rose-in-bloom-close-up-photo-5fNcr2tJ-aI" target="_blank" rel="noopener noreferrer">Liliya Kontanistova</a>
     </p>
 </footer>
 <script type="module" src="js/app.js"></script>

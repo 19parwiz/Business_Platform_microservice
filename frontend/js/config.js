@@ -1,5 +1,5 @@
 /**
- * API base URL for the Go api-gateway (HTTP).
+ * Base URL for the shop HTTP API.
  * Override via <meta name="api-base" content="http://host:port"> in index.html.
  */
 export function getApiBase() {
