@@ -45,13 +45,12 @@ func New(cfg config.Server, userUsecase usecase.UserUsecase) *ServerAPI {
 // Run starts the gRPC server
 func (s *ServerAPI) Run(errCh chan<- error) {
 	go func() {
-		log.Printf("gRPC server running on: %v", s.address)
-
 		lis, err := net.Listen("tcp", s.address)
 		if err != nil {
 			errCh <- fmt.Errorf("failed to listen on %s: %w", s.address, err)
 			return
 		}
+		log.Printf("gRPC listening on %s", lis.Addr().String())
 
 		if err := s.grpcServer.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			errCh <- fmt.Errorf("failed to run gRPC server: %w", err)

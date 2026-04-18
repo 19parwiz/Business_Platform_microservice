@@ -1,13 +1,12 @@
 package config
 
 import (
+	"os"
+	"time"
+
 	"github.com/19parwiz/user-service/pkg/postgres"
 	"github.com/caarlos0/env/v10"
 	"github.com/joho/godotenv"
-	_ "github.com/joho/godotenv/autoload"
-	"log"
-
-	"time"
 )
 
 type (
@@ -19,9 +18,9 @@ type (
 		Version  string `env:"VERSION"`
 	}
 
-	// App holds non-secret URLs and behaviour shared by use cases (e.g. email links).
+	// Public, non-secret settings (e.g. URLs in outbound email).
 	App struct {
-		// PublicBaseURL is the user-facing web origin (no trailing slash), e.g. https://app.example.com
+		// Web origin without a trailing slash.
 		PublicBaseURL string `env:"PUBLIC_APP_URL" envDefault:"http://localhost:3000"`
 	}
 
@@ -44,7 +43,7 @@ type (
 		Timeout time.Duration `env:"GRPC_TIMEOUT" envDefault:"30s"`
 	}
 
-	SMTPConfig struct { // <-- Added SMTPConfig struct
+	SMTPConfig struct {
 		Host     string `env:"SMTP_HOST,required"`
 		Port     int    `env:"SMTP_PORT,required"`
 		Username string `env:"SMTP_USERNAME,required"`
@@ -53,9 +52,12 @@ type (
 )
 
 func New() (*Config, error) {
-	//Loading local .env file for private configuration
-	if err := godotenv.Load("local.env"); err != nil {
-		log.Printf("Error loading local.env file")
+	// Load local.env.template, then local.env, then .env; later files override earlier ones (missing files skipped).
+	for _, name := range []string{"local.env.template", "local.env", ".env"} {
+		if _, err := os.Stat(name); err != nil {
+			continue
+		}
+		_ = godotenv.Overload(name)
 	}
 
 	var cfg Config
