@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -21,6 +22,17 @@ import (
 
 const serviceName = "inventory-service"
 const consumerGroupName = "inventory-consumer-group"
+
+func nonEmptyBrokers(in []string) []string {
+	var out []string
+	for _, b := range in {
+		b = strings.TrimSpace(b)
+		if b != "" {
+			out = append(out, b)
+		}
+	}
+	return out
+}
 
 type App struct {
 	httpServer    *httpRepo.API
@@ -47,13 +59,21 @@ func New(ctx context.Context, cfg *config.Config) (*App, error) {
 	httpServer := httpRepo.New(cfg.Server, pUsecase)
 	grpcServer := grpcAPI.New(cfg.Server, pUsecase)
 
-	kafkaConfig := sarama.NewConfig()
-	kafkaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
-	consumerGroup, err := sarama.NewConsumerGroup(cfg.Brokers, consumerGroupName, kafkaConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create consumer group: %w", err)
+	brokers := nonEmptyBrokers(cfg.Brokers)
+	var consumerGroup sarama.ConsumerGroup
+	var kafkaHandler *kafka.Consumer
+	if len(brokers) > 0 {
+		kafkaConfig := sarama.NewConfig()
+		kafkaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
+		var err error
+		consumerGroup, err = sarama.NewConsumerGroup(brokers, consumerGroupName, kafkaConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create consumer group: %w", err)
+		}
+		kafkaHandler = kafka.NewConsumer(pUsecase, "order.created")
+	} else {
+		log.Println("Kafka consumer disabled (BROKERS unset or empty); HTTP/gRPC still run. Set BROKERS=127.0.0.1:9092 when Docker Kafka is up.")
 	}
-	kafkaHandler := kafka.NewConsumer(pUsecase, "order.created")
 
 	app := &App{
 		httpServer:    httpServer,
@@ -72,14 +92,15 @@ func (app *App) Start() error {
 	app.httpServer.Run(errCh)
 	app.grpcServer.Run(errCh)
 
-	// Start Kafka consumer in background
-	go func() {
-		for {
-			if err := app.consumerGroup.Consume(context.Background(), []string{app.kafkaHandler.Topic}, app.kafkaHandler); err != nil {
-				log.Printf("Consumer error: %v", err)
+	if app.consumerGroup != nil && app.kafkaHandler != nil {
+		go func() {
+			for {
+				if err := app.consumerGroup.Consume(context.Background(), []string{app.kafkaHandler.Topic}, app.kafkaHandler); err != nil {
+					log.Printf("Consumer error: %v", err)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	log.Printf(fmt.Sprintf("Starting %s service!", serviceName))
 
@@ -111,8 +132,10 @@ func (app *App) Stop() {
 		log.Println("failed to shutdown grpc service:", err)
 	}
 
-	if err := app.consumerGroup.Close(); err != nil {
-		log.Println("failed to close consumer group:", err)
+	if app.consumerGroup != nil {
+		if err := app.consumerGroup.Close(); err != nil {
+			log.Println("failed to close consumer group:", err)
+		}
 	}
 	if app.pgDB != nil {
 		app.pgDB.Close()

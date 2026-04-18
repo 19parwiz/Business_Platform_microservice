@@ -4,8 +4,6 @@ import (
 	"github.com/19parwiz/inventory-service/pkg/postgres"
 	"github.com/caarlos0/env/v10"
 	"github.com/joho/godotenv"
-	_ "github.com/joho/godotenv/autoload"
-	"log"
 	"time"
 )
 
@@ -38,10 +36,9 @@ type (
 )
 
 func New() (*Config, error) {
-	//Loading local .env file for private configuration
-	if err := godotenv.Load("local.env"); err != nil {
-		log.Printf("Error loading local.env file")
-	}
+	// PostgreSQL (and Kafka, ports): local.env then .env (.env wins so secrets you edit here override any template).
+	_ = godotenv.Load("local.env")
+	_ = godotenv.Overload(".env")
 
 	var cfg Config
 	err := env.Parse(&cfg)
